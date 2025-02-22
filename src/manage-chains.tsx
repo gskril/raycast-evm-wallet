@@ -1,12 +1,11 @@
+import { useSavedChains } from "./hooks";
+import { allChains as _allChains } from "./lib/chains";
 import { Chain } from "./lib/types";
 import { ActionPanel, Action, Icon, List, Color, useNavigation, Form } from "@raycast/api";
-import { useLocalStorage } from "@raycast/utils";
-import * as viemChains from "viem/chains";
 import type { Chain as ViemChain } from "viem/chains";
 
 export default function ManageChainsView() {
-  const { value: chains, setValue: setChains, isLoading } = useLocalStorage<Chain[]>("chains");
-  const _allChains = Object.values(viemChains);
+  const { value: chains, setValue: setChains, isLoading } = useSavedChains();
 
   // Move a few select chains to the top of the list in a specific order
   const topChains = [1, 8453, 42161, 10, 59144];
@@ -72,7 +71,7 @@ export default function ManageChainsView() {
 }
 
 function SetRpcUrlView({ chainId }: { chainId: number }) {
-  const { value: chains, setValue: setChains, isLoading } = useLocalStorage<Chain[]>("chains");
+  const { value: chains, setValue: setChains, isLoading } = useSavedChains();
   const chain = chains?.find((chain) => chain.id === chainId);
   const { pop } = useNavigation();
 
@@ -91,8 +90,12 @@ function SetRpcUrlView({ chainId }: { chainId: number }) {
                 throw new Error("Unreachable");
               }
 
-              const newChains = chains?.map((chain) => (chain.id === chain.id ? newItem : chain));
-              await setChains(newChains);
+              const chainsWithoutOld = chains.filter((chain) => chain.id !== chainId);
+
+              // Enforce unique chain ids
+              const newChains = new Set(chainsWithoutOld).add(newItem);
+
+              await setChains(Array.from(newChains));
               pop();
             }}
           />
