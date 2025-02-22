@@ -43,7 +43,6 @@ function RenameAccountView({ address, refetch }: { address: string; refetch: () 
             title="Rename Account"
             onSubmit={async (values) => {
               await LocalStorage.setItem(`account:${address}`, values.title);
-              console.log(`Set ${address} to ${values.title}`);
               refetch();
               pop();
             }}

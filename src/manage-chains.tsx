@@ -93,7 +93,6 @@ function SetRpcUrlView({ chainId }: { chainId: number }) {
 
               const newChains = chains?.map((chain) => (chain.id === chain.id ? newItem : chain));
               await setChains(newChains);
-              console.log(`Set ${chain?.id} to ${values.rpcUrl}`);
               pop();
             }}
           />
