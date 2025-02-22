@@ -1,35 +1,10 @@
+import { useAccounts } from "./hooks/useAccounts";
 import { withQuery } from "./lib/with-query";
 import { truncateAddress } from "./utils";
-import { ActionPanel, Action, Icon, List, LocalStorage, getPreferenceValues, Form, useNavigation } from "@raycast/api";
-import { useQuery } from "@tanstack/react-query";
-import { mnemonicToAccount } from "viem/accounts";
-import { bytesToHex } from "viem/utils";
+import { ActionPanel, Action, Icon, List, LocalStorage, Form, useNavigation } from "@raycast/api";
 
 function ManageAccountsView() {
-  const { accountsCountStr, mnemonic } = getPreferenceValues<Preferences>();
-  const accountsCount = parseInt(accountsCountStr);
-
-  const {
-    data: accounts,
-    isLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: async () => {
-      return await Promise.all(
-        Array.from({ length: accountsCount }, async (_, i) => {
-          const localAcc = mnemonicToAccount(mnemonic, { accountIndex: i });
-          const name = await LocalStorage.getItem<string>(`account:${localAcc.address}`);
-
-          return {
-            name: name ?? `Account ${i + 1}`,
-            address: localAcc.address,
-            privateKey: bytesToHex(localAcc.getHdKey().privateKey!),
-          };
-        }),
-      );
-    },
-  });
+  const { data: accounts, isLoading, refetch } = useAccounts();
 
   return (
     <List isLoading={isLoading}>
