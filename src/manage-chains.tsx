@@ -52,8 +52,8 @@ export default function ManageChainsView() {
                     title="Add Chain"
                     onSubmit={async () => {
                       const newItem = { id: item.id, name: item.name, rpcUrl: item.rpcUrls.default?.http?.[0] };
-                      const newChains = chains ? [...chains, newItem] : [newItem];
-                      await setChains(newChains);
+                      const newChains = new Set(chains ?? []).add(newItem);
+                      await setChains(Array.from(newChains));
                     }}
                   />
                 )}
