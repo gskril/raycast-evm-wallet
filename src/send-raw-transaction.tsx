@@ -1,12 +1,11 @@
 import { useAccounts, useBalance, useSavedChains } from "./hooks";
 import { useEnsAddress } from "./hooks/useEnsAddress";
-import { allChains } from "./lib/chains";
 import "./lib/fetch-polyfill";
+import { createViemPublicClient, createViemWalletClient } from "./lib/utils";
 import { withQuery } from "./lib/with-query";
 import { Form, ActionPanel, Action, showToast, Toast, Clipboard } from "@raycast/api";
 import { useState } from "react";
-import { Address, createWalletClient, formatEther, http, isAddress, isHex, parseEther, publicActions } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { Address, formatEther, isAddress, isHex, parseEther } from "viem";
 import { z } from "zod";
 
 const schema = z.object({
@@ -43,13 +42,6 @@ function SendRawTransactionView() {
     }
 
     const { fromAddress, chainId, to, value, data } = safeParse.data;
-    const account = privateKeyToAccount(accounts.data!.find((account) => account.address === fromAddress)!.privateKey);
-    const chainFromStorage = chains.value!.find((chain) => chain.id === chainId)!;
-
-    if (!chainFromStorage.rpcUrl) {
-      showToast({ title: "No RPC URL found" });
-      return;
-    }
 
     // Check if either the to address or the ENS address is valid
     if (!isAddress(to) && !ensAddress) {
@@ -57,27 +49,22 @@ function SendRawTransactionView() {
       return;
     }
 
-    const chain = allChains.find((chain) => chain.id === chainId && chain.name === chainFromStorage.name);
-
-    const client = createWalletClient({
-      chain,
-      account,
-      transport: http(chainFromStorage.rpcUrl),
-    }).extend(publicActions);
+    const walletClient = await createViemWalletClient(chainId, fromAddress);
+    const publicClient = await createViemPublicClient(chainId);
 
     try {
       setTxIsPending(true);
       showToast({ title: "Sending transaction...", style: Toast.Style.Animated });
-      const txHash = await client.sendTransaction({
+      const txHash = await walletClient.sendTransaction({
         to: isAddress(to) ? to : ensAddress,
         value: parseEther(value.toString()),
         data,
       });
 
-      await client.waitForTransactionReceipt({ hash: txHash });
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
       setTxIsPending(false);
 
-      const hasBlockExplorer = !!chain?.blockExplorers?.default;
+      const hasBlockExplorer = !!publicClient.chain.blockExplorers?.default;
 
       showToast({
         title: "Transaction success!",
@@ -86,7 +73,7 @@ function SendRawTransactionView() {
       });
 
       if (hasBlockExplorer) {
-        Clipboard.copy(`${chain?.blockExplorers?.default.url}/tx/${txHash}`);
+        Clipboard.copy(`${publicClient.chain.blockExplorers?.default.url}/tx/${txHash}`);
       }
     } catch (error) {
       setTxIsPending(false);

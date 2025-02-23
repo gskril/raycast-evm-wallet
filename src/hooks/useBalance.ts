@@ -1,7 +1,6 @@
-import { allChains } from "../lib/chains";
-import { useSavedChains } from "./useSavedChains";
+import { createViemPublicClient } from "../lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { Address, createPublicClient, http } from "viem";
+import { Address } from "viem";
 
 type Props = {
   address?: Address | null;
@@ -9,8 +8,6 @@ type Props = {
 };
 
 export function useBalance({ address, chainId }: Props) {
-  const chains = useSavedChains();
-
   return useQuery({
     queryKey: ["balance", address, chainId],
     queryFn: async () => {
@@ -18,20 +15,7 @@ export function useBalance({ address, chainId }: Props) {
         return null;
       }
 
-      const chainFromStorage = chains.value!.find((chain) => chain.id === chainId);
-
-      // Technically this has some edge cases with obscure testnets that share the same id
-      const chain = allChains.find((chain) => chain.id === chainId);
-
-      if (!chain) {
-        throw new Error(`Chain with id ${chainId} not found`);
-      }
-
-      const client = createPublicClient({
-        chain,
-        transport: http(chainFromStorage?.rpcUrl),
-      });
-
+      const client = await createViemPublicClient(chainId);
       return client.getBalance({ address });
     },
   });

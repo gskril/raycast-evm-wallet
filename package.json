@@ -18,18 +18,18 @@
       "type": "password"
     },
     {
+      "name": "zeroXApiKey",
+      "title": "0x API Key",
+      "description": "API key for 0x",
+      "type": "password",
+      "required": true
+    },
+    {
       "name": "accountsCountStr",
       "title": "Accounts",
       "description": "Number of accounts to list from your mnemonic",
       "type": "textfield",
       "default": "5"
-    },
-    {
-      "name": "zeroXApiKey",
-      "title": "0x API Key",
-      "description": "API key for 0x",
-      "type": "textfield",
-      "required": true
     }
   ],
   "commands": [

@@ -1,6 +1,6 @@
 import { useAccounts } from "./hooks/useAccounts";
+import { truncateAddress } from "./lib/utils";
 import { withQuery } from "./lib/with-query";
-import { truncateAddress } from "./utils";
 import { ActionPanel, Action, Icon, List, LocalStorage, Form, useNavigation } from "@raycast/api";
 
 function ManageAccountsView() {

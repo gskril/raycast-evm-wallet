@@ -2,11 +2,11 @@ import { useAccounts, useBalance, useSavedChains } from "./hooks";
 import { use0xQuote } from "./hooks/useQuote";
 import "./lib/fetch-polyfill";
 import { matcha } from "./lib/matcha";
+import { createViemPublicClient, createViemWalletClient } from "./lib/utils";
 import { withQuery } from "./lib/with-query";
 import { Form, ActionPanel, Action, showToast, Toast, Clipboard } from "@raycast/api";
 import { useState } from "react";
-import { Address, createWalletClient, formatEther, formatUnits, http, isAddress, publicActions } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { Address, formatEther, formatUnits, isAddress } from "viem";
 import { z } from "zod";
 
 const schema = z.object({
@@ -39,35 +39,24 @@ function SwapView() {
       return;
     }
 
-    const account = privateKeyToAccount(
-      accounts.data!.find((account) => account.address === safeValues.fromAddress)!.privateKey,
-    );
-
-    const chainFromStorage = chains.value!.find((chain) => chain.id === safeValues.chainId);
-    const chain = matcha.chains.find((chain) => chain.id === safeValues.chainId);
-
-    const client = createWalletClient({
-      chain,
-      account,
-      // Use the saved RPC URL if it exists, otherwise use the Viem default
-      transport: http(chainFromStorage?.rpcUrl),
-    }).extend(publicActions);
+    const publicClient = await createViemPublicClient(safeValues.chainId);
+    const walletClient = await createViemWalletClient(safeValues.chainId, safeValues.fromAddress);
 
     try {
       const quote = await matcha.getQuote(safeValues);
 
       setTxIsPending(true);
       showToast({ title: "Sending transaction...", style: Toast.Style.Animated });
-      const txHash = await client.sendTransaction({
+      const txHash = await walletClient.sendTransaction({
         to: quote.to,
         value: BigInt(quote.value),
         data: quote.data,
       });
 
-      await client.waitForTransactionReceipt({ hash: txHash });
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
       setTxIsPending(false);
 
-      const hasBlockExplorer = !!chain?.blockExplorers?.default;
+      const hasBlockExplorer = !!publicClient.chain.blockExplorers?.default;
 
       showToast({
         title: "Transaction success!",
@@ -76,7 +65,7 @@ function SwapView() {
       });
 
       if (hasBlockExplorer) {
-        Clipboard.copy(`${chain?.blockExplorers?.default.url}/tx/${txHash}`);
+        Clipboard.copy(`${publicClient.chain.blockExplorers?.default.url}/tx/${txHash}`);
       }
     } catch (error) {
       setTxIsPending(false);

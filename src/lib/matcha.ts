@@ -1,6 +1,7 @@
-import { Chain, ZeroXSwapQuote } from "./types";
-import { getPreferenceValues, LocalStorage } from "@raycast/api";
-import { createPublicClient, erc20Abi, getContract, http, parseAbi } from "viem";
+import { ZeroXSwapQuote } from "./types";
+import { createViemPublicClient } from "./utils";
+import { getPreferenceValues } from "@raycast/api";
+import { erc20Abi, getContract, parseAbi } from "viem";
 import { arbitrum, base, mainnet, optimism, unichain } from "viem/chains";
 import { parseEther } from "viem/utils";
 
@@ -35,14 +36,7 @@ async function getQuote({
     headers: { "0x-api-key": zeroXApiKey },
   });
 
-  const chainsFromStorage = JSON.parse((await LocalStorage.getItem("chains")) ?? "[]") as Chain[];
-  const chainFromStorage = chainsFromStorage.find((chain) => chain.id === chainId);
-
-  const localClient = createPublicClient({
-    chain: matcha.chains.find((chain) => chain.id === chainId),
-    // Use the saved RPC URL if it exists, otherwise use the Viem default
-    transport: http(chainFromStorage?.rpcUrl),
-  });
+  const localClient = await createViemPublicClient(chainId);
 
   const token = getContract({
     client: localClient,
@@ -85,13 +79,7 @@ function getApiNameFromChainId(chainId: number) {
 }
 
 async function getEthPrice() {
-  const chainsFromStorage = JSON.parse((await LocalStorage.getItem("chains")) ?? "[]") as Chain[];
-
-  const l1Client = createPublicClient({
-    chain: mainnet,
-    // Use the saved RPC URL for Ethereum if it's set
-    transport: http(chainsFromStorage.find((chain) => chain.id === 1)?.rpcUrl),
-  });
+  const l1Client = await createViemPublicClient(1);
 
   const sourceToken = {
     address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
