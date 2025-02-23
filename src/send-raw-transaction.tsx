@@ -73,8 +73,18 @@ function SendRawTransactionView() {
 
       await client.waitForTransactionReceipt({ hash: txHash });
       setTxIsPending(false);
-      showToast({ title: "Transaction success!", style: Toast.Style.Success });
-      Clipboard.copy(`${chain?.blockExplorers?.default.name}/tx/${txHash}`);
+
+      const hasBlockExplorer = !!chain?.blockExplorers?.default;
+
+      showToast({
+        title: "Transaction success!",
+        message: hasBlockExplorer ? `Copied block explorer link to clipboard` : undefined,
+        style: Toast.Style.Success,
+      });
+
+      if (hasBlockExplorer) {
+        Clipboard.copy(`${chain?.blockExplorers?.default.url}/tx/${txHash}`);
+      }
     } catch (error) {
       setTxIsPending(false);
       showToast({ title: "Error sending transaction", style: Toast.Style.Failure });
