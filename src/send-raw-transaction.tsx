@@ -23,12 +23,15 @@ function SendRawTransactionView() {
   const chains = useSavedChains();
   const [txIsPending, setTxIsPending] = useState(false);
 
-  const [selectedChainId, setSelectedChainId] = useState<number | null>(null);
+  const [selectedChainId, setSelectedChainId] = useState<number>();
   const [fromAddress, setFromAddress] = useState<Address | null>(null);
   const [toNameOrAddress, setToNameOrAddress] = useState<string | null>(null);
 
   // Try to resolve the input to an ENS name if its a dot-separated string
-  const { data: ensAddress } = useEnsAddress(toNameOrAddress?.includes(".") ? toNameOrAddress : undefined);
+  const { data: ensAddress } = useEnsAddress({
+    name: toNameOrAddress?.includes(".") ? toNameOrAddress : undefined,
+    evmChainId: selectedChainId,
+  });
   const balance = useBalance({ address: fromAddress, chainId: selectedChainId });
 
   async function handleSubmit(values: z.infer<typeof schema>) {
@@ -104,6 +107,17 @@ function SendRawTransactionView() {
         </ActionPanel>
       }
     >
+      <Form.Dropdown
+        id="chainId"
+        title="Chain"
+        info={`Edit this list and RPC endpoints with the "Manage Chains" command`}
+        onChange={(value) => setSelectedChainId(Number(value))}
+      >
+        {chains.value?.map((chain) => (
+          <Form.Dropdown.Item key={chain.id} value={chain.id.toString()} title={chain.name} />
+        ))}
+      </Form.Dropdown>
+
       <Form.Dropdown id="fromAddress" title="Account" onChange={(value) => setFromAddress(value as Address)}>
         {accounts.data?.map((account) => (
           <Form.Dropdown.Item
@@ -116,17 +130,6 @@ function SendRawTransactionView() {
       </Form.Dropdown>
 
       <Form.Description title="Balance" text={balance.isLoading ? "..." : formatEther(balance.data || 0n) + " ETH"} />
-
-      <Form.Dropdown
-        id="chainId"
-        title="Chain"
-        info={`Edit this list and RPC endpoints with the "Manage Chains" command`}
-        onChange={(value) => setSelectedChainId(Number(value))}
-      >
-        {chains.value?.map((chain) => (
-          <Form.Dropdown.Item key={chain.id} value={chain.id.toString()} title={chain.name} />
-        ))}
-      </Form.Dropdown>
 
       <Form.TextField
         id="to"
