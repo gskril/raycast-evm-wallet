@@ -18,7 +18,7 @@ export function useBalance({ address, chainId }: Props) {
         return null;
       }
 
-      const chainFromStorage = chains.value!.find((chain) => chain.id === chainId)!;
+      const chainFromStorage = chains.value!.find((chain) => chain.id === chainId);
 
       // Technically this has some edge cases with obscure testnets that share the same id
       const chain = allChains.find((chain) => chain.id === chainId);
@@ -29,7 +29,7 @@ export function useBalance({ address, chainId }: Props) {
 
       const client = createPublicClient({
         chain,
-        transport: http(chainFromStorage.rpcUrl),
+        transport: http(chainFromStorage?.rpcUrl),
       });
 
       return client.getBalance({ address });

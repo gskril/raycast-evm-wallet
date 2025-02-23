@@ -23,6 +23,13 @@
       "description": "Number of accounts to list from your mnemonic",
       "type": "textfield",
       "default": "5"
+    },
+    {
+      "name": "zeroXApiKey",
+      "title": "0x API Key",
+      "description": "API key for 0x",
+      "type": "textfield",
+      "required": true
     }
   ],
   "commands": [
@@ -41,6 +48,12 @@
     {
       "name": "manage-chains",
       "title": "Manage Chains",
+      "description": "",
+      "mode": "view"
+    },
+    {
+      "name": "swap",
+      "title": "Swap",
       "description": "",
       "mode": "view"
     }
