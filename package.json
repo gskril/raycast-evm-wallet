@@ -49,6 +49,7 @@
     "@raycast/api": "^1.92.1",
     "@raycast/utils": "^1.17.0",
     "@tanstack/react-query": "^5.66.9",
+    "node-fetch": "^3.3.2",
     "viem": "^2.23.4",
     "zod": "^3.24.2"
   },

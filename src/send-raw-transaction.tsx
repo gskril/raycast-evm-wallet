@@ -1,7 +1,9 @@
 import { useAccounts, useBalance, useSavedChains } from "./hooks";
+import { useEnsAddress } from "./hooks/useEnsAddress";
 import { allChains } from "./lib/chains";
+import "./lib/fetch-polyfill";
 import { withQuery } from "./lib/with-query";
-import { Form, ActionPanel, Action, showToast, Toast } from "@raycast/api";
+import { Form, ActionPanel, Action, showToast, Toast, Clipboard } from "@raycast/api";
 import { useState } from "react";
 import { Address, createWalletClient, formatEther, http, isAddress, isHex, parseEther, publicActions } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -10,7 +12,8 @@ import { z } from "zod";
 const schema = z.object({
   fromAddress: z.string().refine((val) => isAddress(val)),
   chainId: z.coerce.number(),
-  to: z.string().refine((val) => isAddress(val)),
+  // Can be an address or ENS name
+  to: z.string().refine((val) => isAddress(val) || (val.includes(".") && !val.includes(" "))),
   value: z.coerce.number(),
   data: z.string().refine((val) => isHex(val)),
 });
@@ -20,13 +23,13 @@ function SendRawTransactionView() {
   const chains = useSavedChains();
   const [txIsPending, setTxIsPending] = useState(false);
 
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [selectedChainId, setSelectedChainId] = useState<number | null>(null);
-  const balance = useBalance({ address: selectedAddress, chainId: selectedChainId });
+  const [fromAddress, setFromAddress] = useState<Address | null>(null);
+  const [toNameOrAddress, setToNameOrAddress] = useState<string | null>(null);
 
-  // console.log("balance.data", balance.data);
-  // console.log("balance.isLoading", balance.isLoading);
-  // console.log("balance.error", balance.error);
+  // Try to resolve the input to an ENS name if its a dot-separated string
+  const { data: ensAddress } = useEnsAddress(toNameOrAddress?.includes(".") ? toNameOrAddress : undefined);
+  const balance = useBalance({ address: fromAddress, chainId: selectedChainId });
 
   async function handleSubmit(values: z.infer<typeof schema>) {
     const safeParse = schema.safeParse(values);
@@ -45,6 +48,12 @@ function SendRawTransactionView() {
       return;
     }
 
+    // Check if either the to address or the ENS address is valid
+    if (!isAddress(to) && !ensAddress) {
+      showToast({ title: "Invalid address or ENS name" });
+      return;
+    }
+
     const chain = allChains.find((chain) => chain.id === chainId && chain.name === chainFromStorage.name);
 
     const client = createWalletClient({
@@ -57,7 +66,7 @@ function SendRawTransactionView() {
       setTxIsPending(true);
       showToast({ title: "Sending transaction...", style: Toast.Style.Animated });
       const txHash = await client.sendTransaction({
-        to,
+        to: isAddress(to) ? to : ensAddress,
         value: parseEther(value.toString()),
         data,
       });
@@ -65,6 +74,7 @@ function SendRawTransactionView() {
       await client.waitForTransactionReceipt({ hash: txHash });
       setTxIsPending(false);
       showToast({ title: "Transaction success!", style: Toast.Style.Success });
+      Clipboard.copy(`${chain?.blockExplorers?.default.name}/tx/${txHash}`);
     } catch (error) {
       setTxIsPending(false);
       showToast({ title: "Error sending transaction", style: Toast.Style.Failure });
@@ -84,7 +94,7 @@ function SendRawTransactionView() {
         </ActionPanel>
       }
     >
-      <Form.Dropdown id="fromAddress" title="Account" onChange={(value) => setSelectedAddress(value as Address)}>
+      <Form.Dropdown id="fromAddress" title="Account" onChange={(value) => setFromAddress(value as Address)}>
         {accounts.data?.map((account) => (
           <Form.Dropdown.Item
             key={account.address}
@@ -108,7 +118,15 @@ function SendRawTransactionView() {
         ))}
       </Form.Dropdown>
 
-      <Form.TextField id="to" title="To" placeholder="0x..." />
+      <Form.TextField
+        id="to"
+        title="To"
+        placeholder="Address or ENS name"
+        onChange={(value) => setToNameOrAddress(value)}
+      />
+
+      {ensAddress && <Form.Description title="=>" text={ensAddress} />}
+
       <Form.TextField id="value" title="Value" info="In Ether" placeholder="0.01" />
       <Form.TextArea id="data" title="Data" placeholder="0x...." defaultValue="0x" />
     </Form>

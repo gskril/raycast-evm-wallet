@@ -32,9 +32,7 @@ export function useBalance({ address, chainId }: Props) {
         transport: http(chainFromStorage.rpcUrl),
       });
 
-      const res = await client.getBalance({ address });
-      console.log("after");
-      return res;
+      return client.getBalance({ address });
     },
   });
 }
